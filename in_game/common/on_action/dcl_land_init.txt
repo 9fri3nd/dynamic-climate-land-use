@@ -1,0 +1,39 @@
+﻿# Dynamic Climate & Land Use: one-time world seeding (spec 5, 7.3).
+# Both hooks are scope none. on_game_start seeds every owned location's
+# cultivation_ratio (with the permanent size-scaled land modifiers) and stamps
+# every area's dcl_area_class for front eligibility. The stamp effect gates on the
+# capital being a land location (sea zones carry climates too - table_bay is
+# oceanic, location_templates.txt:18574), so ocean/sea and capital-less areas are
+# never stamped.
+# on_game_load_after_lobby re-stamps only areas missing the class, which covers
+# saves created before the mod was added; cultivation on owned locations is
+# covered by the monthly/yearly dcl_ensure_cultivation guards instead.
+on_game_start = {
+    on_actions = { dcl_land_game_start_init }
+}
+
+on_game_load_after_lobby = {
+    on_actions = { dcl_area_class_load_guard }
+}
+
+dcl_land_game_start_init = {
+    effect = {
+        every_country = {
+            every_owned_location = {
+                dcl_init_cultivation = yes
+            }
+        }
+        every_area = {
+            dcl_stamp_area_class = yes
+        }
+    }
+}
+
+dcl_area_class_load_guard = {
+    effect = {
+        every_area = {
+            limit = { NOT = { has_variable = dcl_area_class } }
+            dcl_stamp_area_class = yes
+        }
+    }
+}

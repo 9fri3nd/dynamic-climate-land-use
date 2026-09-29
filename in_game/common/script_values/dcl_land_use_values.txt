@@ -1,0 +1,269 @@
+﻿# Dynamic Climate & Land Use: cultivation ratio, land drift and GUI hazard flags.
+# Location scope. cultivation_ratio is a location variable owned by the monthly pass; until it
+# exists every reader falls back to the terrain-derived initial ratio.
+# Audit note: refs failures naming dcl_* static modifiers in this file are forward
+# references; the modifiers arrive with Task 6 (main_menu/common/static_modifiers).
+
+dcl_initial_cultivation = {
+    if = {
+        limit = { topography = wetlands }
+        value = 0.05
+    }
+    else_if = {
+        limit = {
+            OR = {
+                vegetation = desert
+                vegetation = sparse
+            }
+        }
+        value = 0.05
+    }
+    else_if = {
+        limit = {
+            topography = hills
+            OR = {
+                vegetation = farmland
+                vegetation = grasslands
+            }
+        }
+        value = 0.30
+    }
+    else_if = {
+        limit = {
+            OR = {
+                topography = mountains
+                topography = hills
+                topography = plateau
+            }
+        }
+        value = 0.15
+    }
+    else_if = {
+        limit = {
+            OR = {
+                vegetation = woods
+                vegetation = forest
+                vegetation = jungle
+            }
+        }
+        value = 0.25
+    }
+    else_if = {
+        limit = {
+            OR = {
+                vegetation = farmland
+                vegetation = grasslands
+            }
+        }
+        value = 0.60
+    }
+    else = {
+        value = 0.30
+    }
+}
+
+dcl_max_arable = {
+    if = {
+        limit = { topography = wetlands }
+        value = 0.40
+    }
+    else_if = {
+        limit = {
+            OR = {
+                vegetation = desert
+                vegetation = sparse
+            }
+        }
+        value = 0.20
+    }
+    else_if = {
+        limit = { topography = hills }
+        value = 0.60
+    }
+    else_if = {
+        limit = { topography = mountains }
+        value = 0.35
+    }
+    else_if = {
+        limit = { topography = plateau }
+        value = 0.50
+    }
+    else_if = {
+        limit = { vegetation = jungle }
+        value = 0.55
+    }
+    else_if = {
+        limit = {
+            OR = {
+                vegetation = woods
+                vegetation = forest
+            }
+        }
+        value = 0.70
+    }
+    else_if = {
+        limit = {
+            OR = {
+                vegetation = farmland
+                vegetation = grasslands
+            }
+        }
+        value = 0.95
+    }
+    else = {
+        value = 0.70
+    }
+}
+
+dcl_cultivation_current = {
+    if = {
+        limit = { has_variable = cultivation_ratio }
+        value = var:cultivation_ratio
+    }
+    else = {
+        value = dcl_initial_cultivation
+    }
+}
+
+dcl_farmer_fill = {
+    value = 0
+    if = {
+        limit = { max_rgo_workers > 0 }
+        value = rgo_workers
+        divide = max_rgo_workers
+    }
+    min = 0
+    max = 1
+}
+
+# Monthly drift: climate stress and abandoned fields shrink cultivation, full well-fed
+# fields expand it. The two losses stack; growth needs a food surplus and no stress.
+dcl_land_drift_delta = {
+    value = 0
+    if = {
+        limit = { has_location_modifier = dcl_climate_stress_memory }
+        add = -0.03
+    }
+    if = {
+        limit = {
+            max_rgo_workers > 0
+            dcl_farmer_fill < 0.30
+        }
+        add = -0.04
+    }
+    if = {
+        limit = {
+            dcl_farmer_fill > 0.80
+            market ?= { market_monthly_food_balance > 0 }
+            NOT = { has_location_modifier = dcl_climate_stress_memory }
+        }
+        add = 0.02
+    }
+}
+
+dcl_cultivation_target = {
+    value = dcl_cultivation_current
+    add = dcl_land_drift_delta
+    if = {
+        limit = { dcl_land_drift_delta > 0 }
+        max = dcl_max_arable
+    }
+    min = 0.05
+}
+
+dcl_cultivation_set_delta = {
+    value = dcl_cultivation_target
+    subtract = dcl_cultivation_current
+}
+
+dcl_wilderness_ratio = {
+    value = 1
+    subtract = dcl_cultivation_current
+}
+
+# Public API: no in-mod consumer (the GUI reads dcl_cultivation_current / _percent directly).
+dcl_cultivation_display = {
+    value = dcl_cultivation_current
+}
+
+dcl_cultivation_percent = {
+    value = dcl_cultivation_current
+    multiply = 100
+}
+
+dcl_wilderness_percent = {
+    value = dcl_wilderness_ratio
+    multiply = 100
+}
+
+dcl_max_arable_percent = {
+    value = dcl_max_arable
+    multiply = 100
+}
+
+# GUI hazard flags (1 = active). They use the lazy temperature/humidity forms and are meant
+# for single-location GUI evaluation only. Deliberate duplication: these thresholds mirror
+# the parameterised triggers in dcl_climate_triggers.txt (the GUI cannot substitute scope:
+# reads into trigger parameters) — keep the two copies in sync when tuning.
+dcl_gui_mud_active = {
+    value = 0
+    if = {
+        limit = {
+            dynamic_location_temperature >= 1
+            dynamic_location_temperature <= 8
+            dynamic_location_humidity > 80
+            NOT = { climate = arctic }
+            NOT = { topography = mountains }
+        }
+        value = 1
+    }
+}
+
+dcl_gui_rot_active = {
+    value = 0
+    if = {
+        limit = {
+            dynamic_location_temperature > 30
+            dynamic_location_humidity > 85
+        }
+        value = 1
+    }
+}
+
+dcl_gui_drought_active = {
+    value = 0
+    if = {
+        limit = {
+            dynamic_location_temperature > 32
+            dynamic_location_humidity < 20
+        }
+        value = 1
+    }
+}
+
+dcl_gui_heat_exhaustion_active = {
+    value = 0
+    if = {
+        limit = {
+            wet_bulb_temperature >= 31
+            wet_bulb_temperature < 35
+        }
+        value = 1
+    }
+}
+
+dcl_gui_lethal_heat_active = {
+    value = 0
+    if = {
+        limit = { wet_bulb_temperature >= 35 }
+        value = 1
+    }
+}
+
+dcl_gui_wet_bulb_available = {
+    value = 0
+    if = {
+        limit = { dynamic_location_temperature >= 20 }
+        value = 1
+    }
+}

@@ -1,0 +1,25 @@
+﻿# Dynamic Climate & Land Use: land-use modifiers (spec 7.5).
+# Permanent size-scaled modifiers, applied by dcl_apply_land_modifiers with
+# mode = replace size = <script value> and no duration; re-applied at init and
+# after every yearly drift, so the size always tracks the current ratio. Scaling
+# is purely application-time - the definitions below state effects at size 1.
+# Forestry key: local_lumber_output_modifier (00_modifier_types.txt:8730) chosen
+# over the generic local_raw_material_output (00_modifier_types.txt:4757) -
+# wilderness should reward standing woodland, not mines and other raw RGOs.
+# local_hostile_attrition is already_percent (00_modifier_types.txt:5344), so
+# 2 means 2 percent at size 1; vanilla local_italian_fortifications_modifier
+# (D008_fate_of_the_phoenix_modifiers.txt:339-344) uses the same value 2.
+
+# size = dcl_cultivation_current (the cultivation ratio)
+dcl_cultivated_land = {
+    game_data = { category = location }
+    local_monthly_food_modifier = 0.30
+    local_production_efficiency = 0.10
+}
+
+# size = dcl_wilderness_ratio (1 - cultivation ratio)
+dcl_wilderness_land = {
+    game_data = { category = location }
+    local_lumber_output_modifier = 0.30
+    local_hostile_attrition = 2
+}

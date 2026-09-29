@@ -1,0 +1,25 @@
+﻿# Dynamic Climate & Land Use: monthly country climate pass (spec 2, 6.1, 6.3).
+# monthly_country_pulse is country scope and fires once per country per month.
+# Per owned location: the cultivation guard runs first so freshly acquired
+# locations (conquest, colonisation, old saves) carry a ratio before anything
+# reads it, then dcl_evaluate_location_climate evaluates T/H once, caches them as
+# temporary scope values and applies the matching climate modifiers. Armies get
+# the mirror pass at their unit_location; unowned locations are only ever reached
+# through an army, never pre-computed (spec 1.1). Embarked armies are skipped by
+# the is_land limit inside dcl_evaluate_army_climate: sea zones carry climates too
+# (location_templates.txt:18574), and naval attrition governs them instead.
+monthly_country_pulse = {
+    on_actions = { dcl_climate_monthly_pass }
+}
+
+dcl_climate_monthly_pass = {
+    effect = {
+        every_owned_location = {
+            dcl_ensure_cultivation = yes
+            dcl_evaluate_location_climate = yes
+        }
+        every_army = {
+            dcl_evaluate_army_climate = yes
+        }
+    }
+}

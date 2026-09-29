@@ -1,0 +1,21 @@
+﻿# Dynamic Climate & Land Use: global macro front scheduling (spec 5).
+# weather_monthly_pulse is scope none and fires once per month for the whole world;
+# the roll itself lives in dcl_roll_macro_fronts (dcl_climate_effects.txt). The pulse
+# is re-declared here with only an on_actions list: on_action files are additive
+# across files and the engine merges every declaration (vanilla precedent:
+# ai_personalities_setup.txt re-declares on_game_start the same way).
+weather_monthly_pulse = {
+    on_actions = { dcl_macro_fronts_monthly }
+}
+
+dcl_macro_fronts_monthly = {
+    effect = {
+        # Self-heal: stamp any area still missing its class (covers pre-mod saves if the
+        # on_game_load_after_lobby hook does not fire on this build; no-op once stamped).
+        every_area = {
+            limit = { NOT = { has_variable = dcl_area_class } }
+            dcl_stamp_area_class = yes
+        }
+        dcl_roll_macro_fronts = yes
+    }
+}

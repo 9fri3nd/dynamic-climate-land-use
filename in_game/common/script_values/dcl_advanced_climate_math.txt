@@ -1,0 +1,528 @@
+﻿# Dynamic Climate & Land Use: solar geometry, saturation vapour pressure and wet-bulb.
+# Location scope. Nested script values re-evaluate on every reference, so the hot path is
+# built as GENERATED leaf tables (climate/coastal/month are discrete inputs) feeding
+# single-reference formula chains; the only upstream read that happens twice is the
+# day-length odd factor x (once directly, once as y = x^2 via pow). Constants and tables
+# come from tools/dcl_fit_coefficients.py -- regenerate, do not hand-edit the tables.
+# The monthly pass caches T and H into scope:dcl_t / scope:dcl_h and uses the *_cached
+# twins; temporary scope values do not exist outside the pulse, so the GUI uses the
+# lazy forms instead.
+
+# dcl_lagged_declination: thermally lagged declination (radians) by climate x coastal x month.
+# delta = 0.409 * odd_bhaskara(2 * (month_phase - lag_phase)), month_phase wrapped around the
+# lag midpoint 0.09110; odd_bhaskara(a) = 16 a (1 - |a|) / (4 (|a| - 0.5)^2 + 4).
+# lag_phase = (25 + (1 - continentality) * 15) / 365 per climate (inland / coastal):
+#   tropical 0.09726/0.10959 ; subtropical 0.08904/0.10137 ; arid 0.07671/0.08904 ; mediterranean 0.09315/0.10548 ; cold_arid 0.07260/0.08493 ; oceanic 0.10137/0.10959 ; continental 0.07260/0.08493 ; arctic 0.08082/0.09315
+dcl_lagged_declination = {
+    if = { limit = { climate = tropical }
+        if = { limit = { is_coastal = yes }
+            if = { limit = { current_month = 1 } value = -0.39746 }
+            else_if = { limit = { current_month = 2 } value = -0.39089 }
+            else_if = { limit = { current_month = 3 } value = -0.29057 }
+            else_if = { limit = { current_month = 4 } value = -0.10508 }
+            else_if = { limit = { current_month = 5 } value = 0.10506 }
+            else_if = { limit = { current_month = 6 } value = 0.29057 }
+            else_if = { limit = { current_month = 7 } value = 0.39482 }
+            else_if = { limit = { current_month = 8 } value = 0.39388 }
+            else_if = { limit = { current_month = 9 } value = 0.28307 }
+            else_if = { limit = { current_month = 10 } value = 0.10168 }
+            else_if = { limit = { current_month = 11 } value = -0.1152 }
+            else = { value = -0.29302 }
+        }
+        else = {
+            if = { limit = { current_month = 1 } value = -0.40376 }
+            else_if = { limit = { current_month = 2 } value = -0.38036 }
+            else_if = { limit = { current_month = 3 } value = -0.26755 }
+            else_if = { limit = { current_month = 4 } value = -0.07419 }
+            else_if = { limit = { current_month = 5 } value = 0.13521 }
+            else_if = { limit = { current_month = 6 } value = 0.31189 }
+            else_if = { limit = { current_month = 7 } value = 0.40193 }
+            else_if = { limit = { current_month = 8 } value = 0.38413 }
+            else_if = { limit = { current_month = 9 } value = 0.25952 }
+            else_if = { limit = { current_month = 10 } value = 0.07072 }
+            else_if = { limit = { current_month = 11 } value = -0.14508 }
+            else = { value = -0.31415 }
+        }
+    }
+    else_if = { limit = { climate = subtropical }
+        if = { limit = { is_coastal = yes }
+            if = { limit = { current_month = 1 } value = -0.40193 }
+            else_if = { limit = { current_month = 2 } value = -0.38413 }
+            else_if = { limit = { current_month = 3 } value = -0.2754 }
+            else_if = { limit = { current_month = 4 } value = -0.08456 }
+            else_if = { limit = { current_month = 5 } value = 0.12525 }
+            else_if = { limit = { current_month = 6 } value = 0.30498 }
+            else_if = { limit = { current_month = 7 } value = 0.39983 }
+            else_if = { limit = { current_month = 8 } value = 0.38764 }
+            else_if = { limit = { current_month = 9 } value = 0.26755 }
+            else_if = { limit = { current_month = 10 } value = 0.08111 }
+            else_if = { limit = { current_month = 11 } value = -0.13521 }
+            else = { value = -0.3073 }
+        }
+        else = {
+            if = { limit = { current_month = 1 } value = -0.40661 }
+            else_if = { limit = { current_month = 2 } value = -0.37207 }
+            else_if = { limit = { current_month = 3 } value = -0.25133 }
+            else_if = { limit = { current_month = 4 } value = -0.05326 }
+            else_if = { limit = { current_month = 5 } value = 0.15485 }
+            else_if = { limit = { current_month = 6 } value = 0.3251 }
+            else_if = { limit = { current_month = 7 } value = 0.40532 }
+            else_if = { limit = { current_month = 8 } value = 0.37634 }
+            else_if = { limit = { current_month = 9 } value = 0.24297 }
+            else_if = { limit = { current_month = 10 } value = 0.04975 }
+            else_if = { limit = { current_month = 11 } value = -0.16451 }
+            else = { value = -0.32722 }
+        }
+    }
+    else_if = { limit = { climate = arid }
+        if = { limit = { is_coastal = yes }
+            if = { limit = { current_month = 1 } value = -0.40661 }
+            else_if = { limit = { current_month = 2 } value = -0.37207 }
+            else_if = { limit = { current_month = 3 } value = -0.25133 }
+            else_if = { limit = { current_month = 4 } value = -0.05326 }
+            else_if = { limit = { current_month = 5 } value = 0.15485 }
+            else_if = { limit = { current_month = 6 } value = 0.3251 }
+            else_if = { limit = { current_month = 7 } value = 0.40532 }
+            else_if = { limit = { current_month = 8 } value = 0.37634 }
+            else_if = { limit = { current_month = 9 } value = 0.24297 }
+            else_if = { limit = { current_month = 10 } value = 0.04975 }
+            else_if = { limit = { current_month = 11 } value = -0.16451 }
+            else = { value = -0.32722 }
+        }
+        else = {
+            if = { limit = { current_month = 1 } value = -0.40881 }
+            else_if = { limit = { current_month = 2 } value = -0.35778 }
+            else_if = { limit = { current_month = 3 } value = -0.22579 }
+            else_if = { limit = { current_month = 4 } value = -0.02144 }
+            else_if = { limit = { current_month = 5 } value = 0.18348 }
+            else_if = { limit = { current_month = 6 } value = 0.34331 }
+            else_if = { limit = { current_month = 7 } value = 0.40835 }
+            else_if = { limit = { current_month = 8 } value = 0.36278 }
+            else_if = { limit = { current_month = 9 } value = 0.21697 }
+            else_if = { limit = { current_month = 10 } value = 0.01788 }
+            else_if = { limit = { current_month = 11 } value = -0.19279 }
+            else = { value = -0.34521 }
+        }
+    }
+    else_if = { limit = { climate = mediterranean }
+        if = { limit = { is_coastal = yes }
+            if = { limit = { current_month = 1 } value = -0.39983 }
+            else_if = { limit = { current_month = 2 } value = -0.38764 }
+            else_if = { limit = { current_month = 3 } value = -0.28307 }
+            else_if = { limit = { current_month = 4 } value = -0.09486 }
+            else_if = { limit = { current_month = 5 } value = 0.1152 }
+            else_if = { limit = { current_month = 6 } value = 0.29787 }
+            else_if = { limit = { current_month = 7 } value = 0.39746 }
+            else_if = { limit = { current_month = 8 } value = 0.39089 }
+            else_if = { limit = { current_month = 9 } value = 0.2754 }
+            else_if = { limit = { current_month = 10 } value = 0.09144 }
+            else_if = { limit = { current_month = 11 } value = -0.12525 }
+            else = { value = -0.30026 }
+        }
+        else = {
+            if = { limit = { current_month = 1 } value = -0.40532 }
+            else_if = { limit = { current_month = 2 } value = -0.37634 }
+            else_if = { limit = { current_month = 3 } value = -0.25952 }
+            else_if = { limit = { current_month = 4 } value = -0.06376 }
+            else_if = { limit = { current_month = 5 } value = 0.14508 }
+            else_if = { limit = { current_month = 6 } value = 0.3186 }
+            else_if = { limit = { current_month = 7 } value = 0.40376 }
+            else_if = { limit = { current_month = 8 } value = 0.38036 }
+            else_if = { limit = { current_month = 9 } value = 0.25133 }
+            else_if = { limit = { current_month = 10 } value = 0.06027 }
+            else_if = { limit = { current_month = 11 } value = -0.15485 }
+            else = { value = -0.32079 }
+        }
+    }
+    else_if = { limit = { climate = cold_arid }
+        if = { limit = { is_coastal = yes }
+            if = { limit = { current_month = 1 } value = -0.40762 }
+            else_if = { limit = { current_month = 2 } value = -0.36755 }
+            else_if = { limit = { current_month = 3 } value = -0.24297 }
+            else_if = { limit = { current_month = 4 } value = -0.0427 }
+            else_if = { limit = { current_month = 5 } value = 0.16451 }
+            else_if = { limit = { current_month = 6 } value = 0.33139 }
+            else_if = { limit = { current_month = 7 } value = 0.40661 }
+            else_if = { limit = { current_month = 8 } value = 0.37207 }
+            else_if = { limit = { current_month = 9 } value = 0.23445 }
+            else_if = { limit = { current_month = 10 } value = 0.03917 }
+            else_if = { limit = { current_month = 11 } value = -0.17405 }
+            else = { value = -0.33343 }
+        }
+        else = {
+            if = { limit = { current_month = 1 } value = -0.409 }
+            else_if = { limit = { current_month = 2 } value = -0.35254 }
+            else_if = { limit = { current_month = 3 } value = -0.21697 }
+            else_if = { limit = { current_month = 4 } value = -0.01074 }
+            else_if = { limit = { current_month = 5 } value = 0.19279 }
+            else_if = { limit = { current_month = 6 } value = 0.34893 }
+            else_if = { limit = { current_month = 7 } value = 0.40881 }
+            else_if = { limit = { current_month = 8 } value = 0.35778 }
+            else_if = { limit = { current_month = 9 } value = 0.20802 }
+            else_if = { limit = { current_month = 10 } value = 0.00716 }
+            else_if = { limit = { current_month = 11 } value = -0.20197 }
+            else = { value = -0.35076 }
+        }
+    }
+    else_if = { limit = { climate = continental }
+        if = { limit = { is_coastal = yes }
+            if = { limit = { current_month = 1 } value = -0.40762 }
+            else_if = { limit = { current_month = 2 } value = -0.36755 }
+            else_if = { limit = { current_month = 3 } value = -0.24297 }
+            else_if = { limit = { current_month = 4 } value = -0.0427 }
+            else_if = { limit = { current_month = 5 } value = 0.16451 }
+            else_if = { limit = { current_month = 6 } value = 0.33139 }
+            else_if = { limit = { current_month = 7 } value = 0.40661 }
+            else_if = { limit = { current_month = 8 } value = 0.37207 }
+            else_if = { limit = { current_month = 9 } value = 0.23445 }
+            else_if = { limit = { current_month = 10 } value = 0.03917 }
+            else_if = { limit = { current_month = 11 } value = -0.17405 }
+            else = { value = -0.33343 }
+        }
+        else = {
+            if = { limit = { current_month = 1 } value = -0.409 }
+            else_if = { limit = { current_month = 2 } value = -0.35254 }
+            else_if = { limit = { current_month = 3 } value = -0.21697 }
+            else_if = { limit = { current_month = 4 } value = -0.01074 }
+            else_if = { limit = { current_month = 5 } value = 0.19279 }
+            else_if = { limit = { current_month = 6 } value = 0.34893 }
+            else_if = { limit = { current_month = 7 } value = 0.40881 }
+            else_if = { limit = { current_month = 8 } value = 0.35778 }
+            else_if = { limit = { current_month = 9 } value = 0.20802 }
+            else_if = { limit = { current_month = 10 } value = 0.00716 }
+            else_if = { limit = { current_month = 11 } value = -0.20197 }
+            else = { value = -0.35076 }
+        }
+    }
+    else_if = { limit = { climate = arctic }
+        if = { limit = { is_coastal = yes }
+            if = { limit = { current_month = 1 } value = -0.40532 }
+            else_if = { limit = { current_month = 2 } value = -0.37634 }
+            else_if = { limit = { current_month = 3 } value = -0.25952 }
+            else_if = { limit = { current_month = 4 } value = -0.06376 }
+            else_if = { limit = { current_month = 5 } value = 0.14508 }
+            else_if = { limit = { current_month = 6 } value = 0.3186 }
+            else_if = { limit = { current_month = 7 } value = 0.40376 }
+            else_if = { limit = { current_month = 8 } value = 0.38036 }
+            else_if = { limit = { current_month = 9 } value = 0.25133 }
+            else_if = { limit = { current_month = 10 } value = 0.06027 }
+            else_if = { limit = { current_month = 11 } value = -0.15485 }
+            else = { value = -0.32079 }
+        }
+        else = {
+            if = { limit = { current_month = 1 } value = -0.40835 }
+            else_if = { limit = { current_month = 2 } value = -0.36278 }
+            else_if = { limit = { current_month = 3 } value = -0.23445 }
+            else_if = { limit = { current_month = 4 } value = -0.0321 }
+            else_if = { limit = { current_month = 5 } value = 0.17405 }
+            else_if = { limit = { current_month = 6 } value = 0.33746 }
+            else_if = { limit = { current_month = 7 } value = 0.40762 }
+            else_if = { limit = { current_month = 8 } value = 0.36755 }
+            else_if = { limit = { current_month = 9 } value = 0.22579 }
+            else_if = { limit = { current_month = 10 } value = 0.02855 }
+            else_if = { limit = { current_month = 11 } value = -0.18348 }
+            else = { value = -0.33943 }
+        }
+    }
+    else = {  # oceanic fallback
+        if = { limit = { is_coastal = yes }
+            if = { limit = { current_month = 1 } value = -0.39746 }
+            else_if = { limit = { current_month = 2 } value = -0.39089 }
+            else_if = { limit = { current_month = 3 } value = -0.29057 }
+            else_if = { limit = { current_month = 4 } value = -0.10508 }
+            else_if = { limit = { current_month = 5 } value = 0.10506 }
+            else_if = { limit = { current_month = 6 } value = 0.29057 }
+            else_if = { limit = { current_month = 7 } value = 0.39482 }
+            else_if = { limit = { current_month = 8 } value = 0.39388 }
+            else_if = { limit = { current_month = 9 } value = 0.28307 }
+            else_if = { limit = { current_month = 10 } value = 0.10168 }
+            else_if = { limit = { current_month = 11 } value = -0.1152 }
+            else = { value = -0.29302 }
+        }
+        else = {
+            if = { limit = { current_month = 1 } value = -0.40193 }
+            else_if = { limit = { current_month = 2 } value = -0.38413 }
+            else_if = { limit = { current_month = 3 } value = -0.2754 }
+            else_if = { limit = { current_month = 4 } value = -0.08456 }
+            else_if = { limit = { current_month = 5 } value = 0.12525 }
+            else_if = { limit = { current_month = 6 } value = 0.30498 }
+            else_if = { limit = { current_month = 7 } value = 0.39983 }
+            else_if = { limit = { current_month = 8 } value = 0.38764 }
+            else_if = { limit = { current_month = 9 } value = 0.26755 }
+            else_if = { limit = { current_month = 10 } value = 0.08111 }
+            else_if = { limit = { current_month = 11 } value = -0.13521 }
+            else = { value = -0.3073 }
+        }
+    }
+}
+
+# dcl_solar_month_phase: mid-month phase ((offset + 15 - 80) / 365) wrapped to [-0.5, 0.5).
+dcl_solar_month_phase = {
+    if = { limit = { current_month = 1 } value = -0.17808 }
+    else_if = { limit = { current_month = 2 } value = -0.09315 }
+    else_if = { limit = { current_month = 3 } value = -0.01644 }
+    else_if = { limit = { current_month = 4 } value = 0.06849 }
+    else_if = { limit = { current_month = 5 } value = 0.15068 }
+    else_if = { limit = { current_month = 6 } value = 0.23562 }
+    else_if = { limit = { current_month = 7 } value = 0.31781 }
+    else_if = { limit = { current_month = 8 } value = 0.40274 }
+    else_if = { limit = { current_month = 9 } value = 0.48767 }
+    else_if = { limit = { current_month = 10 } value = -0.43014 }
+    else_if = { limit = { current_month = 11 } value = -0.34521 }
+    else = { value = -0.26301 }
+}
+
+# --- Un-lagged solar declination (spec addendum 1; display path, lazy) ---
+# delta = 0.409 * sin(2 * pi * (doy - 80) / 365) via odd Bhaskara on a = 2 * phase:
+# sin(pi a) = 16 a (1 - |a|) / (4 (|a| - 0.5)^2 + 4); the phase is a generated month leaf.
+dcl_solar_arg = {
+    value = dcl_solar_month_phase
+    multiply = 2
+}
+
+dcl_solar_abs_arg = {
+    value = dcl_solar_arg
+    abs = 0
+}
+
+dcl_solar_num = {
+    value = 1
+    subtract = dcl_solar_abs_arg
+    multiply = dcl_solar_arg
+    multiply = 16
+}
+
+dcl_solar_den = {
+    value = dcl_solar_abs_arg
+    subtract = 0.5
+    pow = 2
+    multiply = 4
+    add = 4
+}
+
+calc_solar_declination = {
+    value = dcl_solar_num
+    divide = dcl_solar_den
+    multiply = 0.409
+}
+
+# --- Lagged-declination helpers (spec addendum 2-3, feeding the temperature hot path) ---
+dcl_lagged_declination_sq = {
+    value = dcl_lagged_declination
+    pow = 2
+}
+
+# tan(delta) ~= delta * (1 + delta^2 / 3)
+dcl_tan_declination = {
+    value = dcl_lagged_declination_sq
+    multiply = 0.33333
+    add = 1
+    multiply = dcl_lagged_declination
+}
+
+# cos(delta) ~= 1 - delta^2 / 2 + delta^4 / 24 as a completed square (one delta^2 read)
+dcl_cos_declination = {
+    value = dcl_lagged_declination_sq
+    subtract = 5.99952
+    pow = 2
+    multiply = 0.04167
+    add = -0.49988
+}
+
+# Sunset hour-angle cosine x = clamp(-tan(lat) * tan(delta), -1, 1); y = x^2 (pow = 2)
+dcl_sunset_cos_arg = {
+    value = dcl_lat_tan
+    multiply = dcl_tan_declination
+    multiply = -1
+    max = 1
+    min = -1
+}
+
+dcl_sunset_cos_arg_sq = {
+    value = dcl_sunset_cos_arg
+    pow = 2
+}
+
+# omega_s / pi = 0.5 - x * (d1 + y * (d7 * (y - dq_s)^2 + dq_o)), d_i = c_i / pi.
+# d3 + d5 y + d7 y^2 is run as the completed square d7 (y - dq_s)^2 + dq_o.
+dcl_day_poly = {
+    value = dcl_sunset_cos_arg_sq
+    subtract = 0.75749
+    pow = 2
+    multiply = 1.17402
+    add = 0.19218
+}
+
+dcl_day_poly_term = {
+    value = dcl_sunset_cos_arg_sq
+    multiply = dcl_day_poly
+    add = 0.22627
+}
+
+dcl_dlf_correction = {
+    value = dcl_sunset_cos_arg
+    multiply = dcl_day_poly_term
+}
+
+calc_day_length_factor = {
+    value = 0.5
+    subtract = dcl_dlf_correction
+}
+
+# insolation = calc_day_length_factor * cos(latitude) * cos(declination)  (spec addendum 3)
+dcl_insolation = {
+    value = calc_day_length_factor
+    multiply = dcl_lat_cos
+    multiply = dcl_cos_declination
+}
+
+# --- Saturation vapour pressure, Lowe 1977 (spec addendum 4), hPa ---
+# t = clamp(T, -50, 50) / 10. Factored sextic E_s = prod_i ((t + p_i)^2 + q_i) / D,
+# D^3 = 16295: no t^6 term, so the polynomial cannot overflow near the clamp edges.
+dcl_lowe_t = {
+    value = dynamic_location_temperature
+    max = 50
+    min = -50
+    multiply = 0.1
+}
+
+dcl_lowe_f1 = {
+    value = dcl_lowe_t
+    add = 3.73165
+    pow = 2
+    add = 38.25318
+    divide = 25.35234
+}
+
+dcl_lowe_f2 = {
+    value = dcl_lowe_t
+    add = 5.56176
+    pow = 2
+    add = 4.34923
+    divide = 25.35234
+}
+
+dcl_lowe_f3 = {
+    value = dcl_lowe_t
+    add = 7.24601
+    pow = 2
+    add = 1.55701
+    divide = 25.35234
+}
+
+dynamic_saturation_vapor_pressure = {
+    value = dcl_lowe_f1
+    multiply = dcl_lowe_f2
+    multiply = dcl_lowe_f3
+}
+
+# --- Wet-bulb temperature, Stull 2011 surrogate (spec addendum 5), lazy form ---
+# Tw = t * (c1 + r * C(r)) + A(r) with t = T / 10, r = RH / 100, completed squares
+# A(r) = c4 (r + a_s)^2 + a_o and C(r) = c6 (r - c_s)^2 + c_o; capped at T (Tw <= T).
+dcl_wb_t = {
+    value = dynamic_location_temperature
+    multiply = 0.1
+}
+
+dcl_wb_r = {
+    value = dynamic_location_humidity
+    multiply = 0.01
+}
+
+dcl_wb_a_poly = {
+    value = dcl_wb_r
+    add = 0.04175
+    pow = 2
+    multiply = 4.27037
+    add = -4.73157
+}
+
+dcl_wb_c_poly = {
+    value = dcl_wb_r
+    subtract = 1.20609
+    pow = 2
+    multiply = 5.81405
+    add = 5.35217
+}
+
+wet_bulb_temperature = {
+    value = dcl_wb_r
+    multiply = dcl_wb_c_poly
+    add = 4.5123
+    multiply = dcl_wb_t
+    add = dcl_wb_a_poly
+    max = dynamic_location_temperature
+}
+
+# --- Cached twins: identical rows reading the monthly pass's scope:dcl_t / scope:dcl_h ---
+dcl_lowe_cached_t = {
+    value = scope:dcl_t
+    max = 50
+    min = -50
+    multiply = 0.1
+}
+
+dcl_lowe_cached_f1 = {
+    value = dcl_lowe_cached_t
+    add = 3.73165
+    pow = 2
+    add = 38.25318
+    divide = 25.35234
+}
+
+dcl_lowe_cached_f2 = {
+    value = dcl_lowe_cached_t
+    add = 5.56176
+    pow = 2
+    add = 4.34923
+    divide = 25.35234
+}
+
+dcl_lowe_cached_f3 = {
+    value = dcl_lowe_cached_t
+    add = 7.24601
+    pow = 2
+    add = 1.55701
+    divide = 25.35234
+}
+
+dcl_saturation_vapor_pressure_cached = {
+    value = dcl_lowe_cached_f1
+    multiply = dcl_lowe_cached_f2
+    multiply = dcl_lowe_cached_f3
+}
+
+dcl_wb_cached_t = {
+    value = scope:dcl_t
+    multiply = 0.1
+}
+
+dcl_wb_cached_r = {
+    value = scope:dcl_h
+    multiply = 0.01
+}
+
+dcl_wb_cached_a_poly = {
+    value = dcl_wb_cached_r
+    add = 0.04175
+    pow = 2
+    multiply = 4.27037
+    add = -4.73157
+}
+
+dcl_wb_cached_c_poly = {
+    value = dcl_wb_cached_r
+    subtract = 1.20609
+    pow = 2
+    multiply = 5.81405
+    add = 5.35217
+}
+
+dcl_wet_bulb_cached = {
+    value = dcl_wb_cached_r
+    multiply = dcl_wb_cached_c_poly
+    add = 4.5123
+    multiply = dcl_wb_cached_t
+    add = dcl_wb_cached_a_poly
+    max = scope:dcl_t
+}

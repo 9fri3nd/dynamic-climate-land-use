@@ -1,0 +1,4 @@
+.superpowers/
+.tmp_before/
+__pycache__/
+*.pyc

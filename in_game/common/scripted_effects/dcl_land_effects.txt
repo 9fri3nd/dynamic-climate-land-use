@@ -1,0 +1,40 @@
+﻿# Dynamic Climate & Land Use: cultivation ratio lifecycle (spec 7).
+# Location scope throughout. Caller contracts:
+#   on_game_start          - every_country -> every_owned_location -> dcl_init_cultivation
+#   monthly/yearly passes  - dcl_ensure_cultivation guards every pass before any ratio read
+#   yearly drift           - dcl_ensure_cultivation, then dcl_apply_land_drift (spec 2)
+# cultivation_ratio is the mod's only persistent location variable, literal-clamped
+# [0.05, 0.95]; the wilderness share is always derived, never stored.
+# Audit note: refs failures naming dcl_* static modifiers in this file are forward
+# references; the modifiers arrive with Task 6 (main_menu/common/static_modifiers).
+
+# Permanent size-scaled land modifiers (spec 7.5), re-applied after every ratio change.
+# The size operands are the guarded Task 3 readers: dcl_cultivation_current falls back
+# to the terrain initial ratio when the variable is absent, so this effect stays safe
+# even if a caller ever runs it before init.
+dcl_apply_land_modifiers = {
+    add_location_modifier = { name = dcl_cultivated_land mode = replace size = dcl_cultivation_current }
+    add_location_modifier = { name = dcl_wilderness_land mode = replace size = dcl_wilderness_ratio }
+}
+
+dcl_init_cultivation = {
+    set_variable = { name = cultivation_ratio value = dcl_initial_cultivation }
+    dcl_apply_land_modifiers = yes
+}
+
+# Save-upgrade / conquest / colonisation guard (spec 7.3).
+dcl_ensure_cultivation = {
+    if = {
+        limit = { NOT = { has_variable = cultivation_ratio } }
+        dcl_init_cultivation = yes
+    }
+}
+
+# Yearly drift (spec 7.4): set-to-N idiom with the pre-computed target delta, literal
+# clamp, then refresh the size-scaled modifiers. Requires the ratio to exist; the
+# yearly pass runs dcl_ensure_cultivation first (spec 2).
+dcl_apply_land_drift = {
+    change_variable = { name = cultivation_ratio add = dcl_cultivation_set_delta }
+    clamp_variable = { name = cultivation_ratio min = 0.05 max = 0.95 }
+    dcl_apply_land_modifiers = yes
+}

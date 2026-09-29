@@ -1,0 +1,78 @@
+﻿# Dynamic Climate & Land Use: parameterised climate-condition triggers (spec 6.2) and
+# area-fit triggers (spec 5).
+# Location scope unless noted otherwise. $T$/$H$/$TW$ are text-replacement parameters:
+# the monthly and army passes substitute direct reads of the scope values saved once per
+# location by dcl_evaluate_* (T = scope:dcl_t, H = scope:dcl_h, TW = scope:dcl_tw).
+# Available pattern (currently unused): callers that cannot save scope values — such as
+# the GUI — may instead pass the lazy script values (T = dynamic_location_temperature,
+# H = dynamic_location_humidity, TW = wet_bulb_temperature); the GUI actually consumes
+# the dcl_gui_* flags instead. (The dcl_*_cached script values wrap the same scope reads
+# for callers that cannot substitute text.) Both substitution products are
+# vanilla-demonstrated forms:
+# scope:x >= N (vanilla events/DHE/flavor_CAS.txt:4732) and named script values as
+# comparison operands (scripted_triggers/readme.txt: arguments are text replacements).
+
+dcl_mud_conditions = {
+    $T$ >= 1
+    $T$ <= 8
+    $H$ > 80
+    NOT = { climate = arctic }
+    NOT = { topography = mountains }
+}
+
+dcl_rot_conditions = {
+    $T$ > 30
+    $H$ > 85
+}
+
+dcl_drought_conditions = {
+    $T$ > 32
+    $H$ < 20
+}
+
+dcl_heat_exhaustion_conditions = {
+    $TW$ >= 31
+    $TW$ < 35
+}
+
+dcl_lethal_heat_conditions = {
+    $TW$ >= 35
+}
+
+# Area-scope front eligibility (spec 5). Each trigger carries its own has_variable
+# guard, so the var: read is safe no matter where the trigger is called; the front roll
+# additionally requires the guard (and no active front) in the random_area limit.
+dcl_area_fits_heatwave = {
+    has_variable = dcl_area_class
+    OR = {
+        var:dcl_area_class = 1
+        var:dcl_area_class = 2
+    }
+}
+
+dcl_area_fits_polar_vortex = {
+    has_variable = dcl_area_class
+    OR = {
+        var:dcl_area_class = 2
+        var:dcl_area_class = 3
+    }
+}
+
+dcl_area_fits_monsoon = {
+    has_variable = dcl_area_class
+    var:dcl_area_class = 1
+}
+
+# Unit scope: the army owner's capital lies in the tropics (unit -> owner -> capital is
+# unit -> country -> location, event_targets.log:1106 and :1333). Armies from tropical
+# capitals are acclimatised and do not suffer expeditionary rot.
+dcl_owner_capital_is_tropical = {
+    owner ?= {
+        capital ?= {
+            OR = {
+                climate = tropical
+                climate = subtropical
+            }
+        }
+    }
+}

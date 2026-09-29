@@ -1,0 +1,17 @@
+﻿# Dynamic Climate & Land Use: yearly land-use drift (spec 2, 7.4).
+# yearly_country_pulse is country scope and fires once per country per year.
+# The guard runs before the drift so a location acquired since the last monthly
+# pass still has a ratio when dcl_apply_land_drift reads it; the drift effect
+# re-applies the size-scaled land modifiers itself after moving the ratio.
+yearly_country_pulse = {
+    on_actions = { dcl_land_drift_yearly_pass }
+}
+
+dcl_land_drift_yearly_pass = {
+    effect = {
+        every_owned_location = {
+            dcl_ensure_cultivation = yes
+            dcl_apply_land_drift = yes
+        }
+    }
+}

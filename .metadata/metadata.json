@@ -1,0 +1,11 @@
+{
+	"name":	"Dynamic Climate & Ecological Land Use",
+	"id":	"",
+	"version":	"0.1.0",
+	"supported_game_version":	"1.3.11",
+	"short_description":	"[b]Lazy, formula-driven climate for EU5[/b]: per-location temperature, humidity, vapour pressure and wet-bulb; regional macro weather fronts (heatwaves, polar vortices, monsoons); climate-driven modifiers for locations and armies; a cultivated-vs-wilderness land-use system with yearly drift; a Climate tab in the location window. Identical rules for player and AI.\n\n[b]Incompatible with Ecology Simulation (eu5-ecology-mod) — disable that mod before enabling this one.[/b]",
+	"tags":	["Gameplay", "Balance"],
+	"relationships":	[],
+	"game_custom_data":	{
+	}
+}

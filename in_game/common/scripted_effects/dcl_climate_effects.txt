@@ -1,0 +1,241 @@
+﻿# Dynamic Climate & Land Use: climate evaluation passes and macro front rolling.
+# Caller contracts:
+#   dcl_evaluate_location_climate - location scope, owned locations (monthly pass, spec 6.1)
+#   dcl_evaluate_army_climate     - unit scope (country every_army, spec 6.3)
+#   dcl_roll_macro_fronts         - scope none (weather_monthly_pulse, spec 5)
+#   dcl_start_front               - area scope, parameters { TYPE DAYS } (spec 5)
+#   dcl_stamp_area_class          - area scope (on_game_start and load guard, spec 5)
+# T and H are evaluated ONCE per location and cached as the temporary scope values
+# dcl_t/dcl_h; every downstream read uses them (or the *_cached script-value twins).
+# dcl_tw is only saved when T >= 31, and every read of scope:dcl_tw sits inside that
+# same gate, so the wet-bulb polynomial never runs in cold locations.
+# Audit note: refs failures naming dcl_* static modifiers in this file are forward
+# references; the modifiers arrive with Task 6 (main_menu/common/static_modifiers).
+
+dcl_evaluate_location_climate = {
+    save_temporary_scope_value_as = { name = dcl_t value = dynamic_location_temperature }
+    save_temporary_scope_value_as = { name = dcl_h value = dynamic_location_humidity }
+    if = {
+        limit = { dcl_mud_conditions = { T = scope:dcl_t H = scope:dcl_h } }
+        add_location_modifier = { name = dcl_mud_season months = 1 mode = replace }
+        add_location_modifier = { name = dcl_climate_stress_memory months = 12 mode = replace }
+    }
+    if = {
+        limit = { dcl_rot_conditions = { T = scope:dcl_t H = scope:dcl_h } }
+        add_location_modifier = { name = dcl_tropical_rot months = 1 mode = replace }
+    }
+    if = {
+        limit = { dcl_drought_conditions = { T = scope:dcl_t H = scope:dcl_h } }
+        add_location_modifier = { name = dcl_severe_drought months = 1 mode = replace }
+        add_location_modifier = { name = dcl_climate_stress_memory months = 12 mode = replace }
+    }
+    # Tw <= T by construction (the surrogate is capped at T), so below 31 C neither heat
+    # condition can fire and scope:dcl_tw is never read before it is saved.
+    if = {
+        limit = { scope:dcl_t >= 31 }
+        save_temporary_scope_value_as = { name = dcl_tw value = dcl_wet_bulb_cached }
+        if = {
+            limit = { dcl_lethal_heat_conditions = { TW = scope:dcl_tw } }
+            add_location_modifier = { name = dcl_lethal_heat months = 1 mode = replace }
+        }
+        else_if = {
+            limit = { dcl_heat_exhaustion_conditions = { TW = scope:dcl_tw } }
+            add_location_modifier = { name = dcl_heat_exhaustion months = 1 mode = replace }
+        }
+    }
+}
+
+dcl_evaluate_army_climate = {
+    unit_location ?= {
+        # Sea zones carry their own climate (table_bay is oceanic,
+        # location_templates.txt:18574), and coastal-winter proxy values can land
+        # inside the mud band; embarked armies are governed by naval attrition
+        # instead of land climate.
+        if = {
+            limit = { is_land = yes }
+            save_temporary_scope_value_as = { name = dcl_t value = dynamic_location_temperature }
+            save_temporary_scope_value_as = { name = dcl_h value = dynamic_location_humidity }
+            if = {
+                limit = { scope:dcl_t >= 31 }
+                save_temporary_scope_value_as = { name = dcl_tw value = dcl_wet_bulb_cached }
+                if = {
+                    limit = { dcl_lethal_heat_conditions = { TW = scope:dcl_tw } }
+                    prev = { add_unit_modifier = { name = dcl_lethal_heat_army months = 1 mode = replace } }
+                }
+                else_if = {
+                    limit = { dcl_heat_exhaustion_conditions = { TW = scope:dcl_tw } }
+                    prev = { add_unit_modifier = { name = dcl_heat_exhaustion_army months = 1 mode = replace } }
+                }
+            }
+            if = {
+                limit = { dcl_rot_conditions = { T = scope:dcl_t H = scope:dcl_h } }
+                prev = {
+                    if = {
+                        limit = { NOT = { dcl_owner_capital_is_tropical = yes } }
+                        add_unit_modifier = { name = dcl_expeditionary_rot months = 1 mode = replace }
+                    }
+                }
+                if = {
+                    limit = { NOT = { has_owner = yes } }
+                    prev = { add_unit_modifier = { name = dcl_rot_army months = 1 mode = replace } }
+                }
+            }
+            if = {
+                limit = {
+                    dcl_mud_conditions = { T = scope:dcl_t H = scope:dcl_h }
+                    NOT = { has_owner = yes }
+                }
+                prev = { add_unit_modifier = { name = dcl_mud_army months = 1 mode = replace } }
+            }
+        }
+    }
+}
+
+# --- Macro weather fronts (spec 5) ---
+# Roll N in {3, 4, 5}, then N independent front rolls. Each roll picks a type
+# uniformly, then a uniformly random stamped area without an active front that fits the
+# type, then a duration of 30-60 days in 5-day steps. All front variables are
+# area-scoped and carry days = so expiry clears them automatically (set_variable,
+# effects.log:10391); should live testing show area variables ignoring days, the spec 5
+# dcl_front_ttl countdown takes over.
+dcl_roll_macro_fronts = {
+    random_list = {
+        1 = { while = { count = 3 dcl_roll_one_front = yes } }
+        1 = { while = { count = 4 dcl_roll_one_front = yes } }
+        1 = { while = { count = 5 dcl_roll_one_front = yes } }
+    }
+}
+
+dcl_roll_one_front = {
+    random_list = {
+        1 = {
+            # no weight key: uniform pick among eligible areas, per spec 5
+            random_area = {
+                limit = {
+                    has_variable = dcl_area_class
+                    NOT = { has_variable = dcl_front_type }
+                    dcl_area_fits_heatwave = yes
+                }
+                random_list = {
+                    1 = { dcl_start_front = { TYPE = 1 DAYS = 30 } }
+                    1 = { dcl_start_front = { TYPE = 1 DAYS = 35 } }
+                    1 = { dcl_start_front = { TYPE = 1 DAYS = 40 } }
+                    1 = { dcl_start_front = { TYPE = 1 DAYS = 45 } }
+                    1 = { dcl_start_front = { TYPE = 1 DAYS = 50 } }
+                    1 = { dcl_start_front = { TYPE = 1 DAYS = 55 } }
+                    1 = { dcl_start_front = { TYPE = 1 DAYS = 60 } }
+                }
+            }
+        }
+        1 = {
+            random_area = {
+                limit = {
+                    has_variable = dcl_area_class
+                    NOT = { has_variable = dcl_front_type }
+                    dcl_area_fits_polar_vortex = yes
+                }
+                random_list = {
+                    1 = { dcl_start_front = { TYPE = 2 DAYS = 30 } }
+                    1 = { dcl_start_front = { TYPE = 2 DAYS = 35 } }
+                    1 = { dcl_start_front = { TYPE = 2 DAYS = 40 } }
+                    1 = { dcl_start_front = { TYPE = 2 DAYS = 45 } }
+                    1 = { dcl_start_front = { TYPE = 2 DAYS = 50 } }
+                    1 = { dcl_start_front = { TYPE = 2 DAYS = 55 } }
+                    1 = { dcl_start_front = { TYPE = 2 DAYS = 60 } }
+                }
+            }
+        }
+        1 = {
+            random_area = {
+                limit = {
+                    has_variable = dcl_area_class
+                    NOT = { has_variable = dcl_front_type }
+                    dcl_area_fits_monsoon = yes
+                }
+                random_list = {
+                    1 = { dcl_start_front = { TYPE = 3 DAYS = 30 } }
+                    1 = { dcl_start_front = { TYPE = 3 DAYS = 35 } }
+                    1 = { dcl_start_front = { TYPE = 3 DAYS = 40 } }
+                    1 = { dcl_start_front = { TYPE = 3 DAYS = 45 } }
+                    1 = { dcl_start_front = { TYPE = 3 DAYS = 50 } }
+                    1 = { dcl_start_front = { TYPE = 3 DAYS = 55 } }
+                    1 = { dcl_start_front = { TYPE = 3 DAYS = 60 } }
+                }
+            }
+        }
+    }
+}
+
+# scope: area
+# Stamps one front on the calling area. dcl_front_type is set first and the anomaly
+# arms branch on it, so $TYPE$ appears only as a value operand (readme-proven form)
+# and $DAYS$ only as a days operand (country_effects.txt:411). A monsoon leaves the
+# temperature anomaly unset; all variables of one front share one expiry.
+dcl_start_front = {
+    set_variable = { name = dcl_front_type value = $TYPE$ days = $DAYS$ }
+    if = {
+        limit = { var:dcl_front_type = 1 }
+        set_variable = { name = macro_temp_anomaly value = 8 days = $DAYS$ }
+        set_variable = { name = macro_humidity_anomaly value = -20 days = $DAYS$ }
+    }
+    if = {
+        limit = { var:dcl_front_type = 2 }
+        set_variable = { name = macro_temp_anomaly value = -12 days = $DAYS$ }
+        set_variable = { name = macro_humidity_anomaly value = -10 days = $DAYS$ }
+    }
+    if = {
+        limit = { var:dcl_front_type = 3 }
+        set_variable = { name = macro_humidity_anomaly value = 40 days = $DAYS$ }
+    }
+}
+
+# scope: area
+# Class 1 warm / 2 temperate / 3 cold, from the climate of the area's capital location
+# (the capital link accepts area input, event_targets.log:1333). The three climate sets
+# are disjoint, so branch order carries no precedence. Sea zones DO carry a climate
+# (table_bay = { topography = coastal_ocean climate = oceanic },
+# location_templates.txt:18574), so climate alone cannot exclude water areas: the whole
+# stamp is gated on the capital being land. is_land is location-scope
+# (triggers.log:6964) and the capital link outputs location, and the null-safe ?= lets
+# a capital-less area fail the gate instead of erroring, so ocean, sea and capital-less
+# areas are never stamped (spec 5: only areas with a land province enter the front pool).
+dcl_stamp_area_class = {
+    if = {
+        limit = { capital ?= { is_land = yes } }
+        if = {
+            limit = {
+                capital ?= {
+                    OR = {
+                        climate = tropical
+                        climate = subtropical
+                        climate = arid
+                    }
+                }
+            }
+            set_variable = { name = dcl_area_class value = 1 }
+        }
+        else_if = {
+            limit = {
+                capital ?= {
+                    OR = {
+                        climate = cold_arid
+                        climate = arctic
+                    }
+                }
+            }
+            set_variable = { name = dcl_area_class value = 3 }
+        }
+        else_if = {
+            limit = {
+                capital ?= {
+                    OR = {
+                        climate = mediterranean
+                        climate = oceanic
+                        climate = continental
+                    }
+                }
+            }
+            set_variable = { name = dcl_area_class value = 2 }
+        }
+    }
+}

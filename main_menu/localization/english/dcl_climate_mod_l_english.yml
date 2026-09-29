@@ -1,0 +1,81 @@
+﻿l_english:
+ STATIC_MODIFIER_NAME_dcl_mud_season:0 "Mud Season"
+ STATIC_MODIFIER_DESC_dcl_mud_season:0 "Thaw and damp (1-8 °C, humidity above 80%) have churned the ground to mud: movement cost +40%, supply limit -30%, army attrition +3%."
+ STATIC_MODIFIER_NAME_dcl_tropical_rot:0 "Tropical Rot"
+ STATIC_MODIFIER_DESC_dcl_tropical_rot:0 "Oppressive heat and humidity (above 30 °C and 85% humidity) breed disease and spoilage: malaria growth +25%, typhus growth +15%, food decay +25%."
+ STATIC_MODIFIER_NAME_dcl_severe_drought:0 "Severe Drought"
+ STATIC_MODIFIER_DESC_dcl_severe_drought:0 "Scorching dry air (above 32 °C, humidity below 20%) parches the fields: food production -35%, construction speed -25%, building efficiency -25%. The land remembers for 12 months."
+ STATIC_MODIFIER_NAME_dcl_heat_exhaustion:0 "Heat Exhaustion"
+ STATIC_MODIFIER_DESC_dcl_heat_exhaustion:0 "A wet-bulb temperature of 31-35 °C drains the people: population growth -25%, army attrition +5%."
+ STATIC_MODIFIER_NAME_dcl_lethal_heat:0 "Lethal Heat"
+ STATIC_MODIFIER_DESC_dcl_lethal_heat:0 "A wet-bulb temperature above 35 °C kills without shelter: population growth -75%, army attrition +15%."
+ STATIC_MODIFIER_NAME_dcl_climate_stress_memory:0 "Climate-Stressed Land"
+ STATIC_MODIFIER_DESC_dcl_climate_stress_memory:0 "Recent mud or drought has stressed the land. While this lasts (12 months), cultivation slowly reverts to wilderness."
+ STATIC_MODIFIER_NAME_dcl_heat_exhaustion_army:0 "Heat Exhaustion"
+ STATIC_MODIFIER_DESC_dcl_heat_exhaustion_army:0 "Wet-bulb temperature of 31-35 °C at the army's position: attrition +10%, morale loss from attrition +10%."
+ STATIC_MODIFIER_NAME_dcl_lethal_heat_army:0 "Lethal Heat"
+ STATIC_MODIFIER_DESC_dcl_lethal_heat_army:0 "Wet-bulb temperature above 35 °C at the army's position: attrition +30%, morale loss from attrition +25%."
+ STATIC_MODIFIER_NAME_dcl_expeditionary_rot:0 "Expeditionary Rot"
+ STATIC_MODIFIER_DESC_dcl_expeditionary_rot:0 "Troops from temperate homelands suffer in heat and humidity above 30 °C and 85%: attrition +15%."
+ STATIC_MODIFIER_NAME_dcl_mud_army:0 "Mud"
+ STATIC_MODIFIER_DESC_dcl_mud_army:0 "Mud in unsettled country slows the march: movement speed -40%, attrition +3%."
+ STATIC_MODIFIER_NAME_dcl_rot_army:0 "Rot"
+ STATIC_MODIFIER_DESC_dcl_rot_army:0 "Tropical rot in unsettled country: attrition +5%."
+ STATIC_MODIFIER_NAME_dcl_cultivated_land:0 "Cultivated Land"
+ STATIC_MODIFIER_DESC_dcl_cultivated_land:0 "Fields under the plough, scaling with the cultivated share: food production +30% and production efficiency +10% at full cultivation. Expands with well-fed full fields, shrinks under climate stress or neglected farms."
+ STATIC_MODIFIER_NAME_dcl_wilderness_land:0 "Wilderness"
+ STATIC_MODIFIER_DESC_dcl_wilderness_land:0 "Untamed land, scaling with the wilderness share: lumber output +30% and hostile attrition +2% at full wilderness."
+
+# --- Climate tab (location window) ---
+ DCL_CLIMATE_TAB:0 "Climate"
+
+# --- Card headers ---
+ DCL_WEATHER_CARD:0 "Weather"
+ DCL_CONDITIONS_CARD:0 "Climate Conditions"
+ DCL_LAND_CARD:0 "Land Use"
+
+# --- Weather card rows and macro front names (front name widgets are gated on dcl_location_front_type) ---
+ DCL_WEATHER_TEMPERATURE:0 "Temperature: [GuiScope.SetRoot(LocationView.GetLocation.MakeScope).ScriptValue('dynamic_location_temperature')|1] °C"
+ DCL_WEATHER_HUMIDITY:0 "Humidity: [GuiScope.SetRoot(LocationView.GetLocation.MakeScope).ScriptValue('dynamic_location_humidity')|0]%"
+ DCL_WEATHER_FRONT:0 "Weather front:"
+ DCL_FRONT_NONE:0 "None"
+ DCL_FRONT_HEATWAVE:0 "Heatwave"
+ DCL_FRONT_POLAR_VORTEX:0 "Polar Vortex"
+ DCL_FRONT_MONSOON:0 "Monsoon"
+
+# --- Weather card tooltip lines (the wet-bulb pair is gated on dcl_gui_wet_bulb_available) ---
+ DCL_TT_SATURATION:0 "Saturation vapour pressure: [GuiScope.SetRoot(LocationView.GetLocation.MakeScope).ScriptValue('dynamic_saturation_vapor_pressure')|1] hPa"
+ DCL_TT_WET_BULB:0 "Wet-bulb temperature: [GuiScope.SetRoot(LocationView.GetLocation.MakeScope).ScriptValue('wet_bulb_temperature')|1] °C"
+ DCL_TT_WET_BULB_NA:0 "Wet-bulb temperature: $DCL_NOT_AVAILABLE$ below 20 °C"
+ DCL_TT_LATITUDE:0 "Latitude proxy: [GuiScope.SetRoot(LocationView.GetLocation.MakeScope).ScriptValue('dcl_lat_deg_display')|0]°"
+ DCL_TT_ELEVATION:0 "Elevation proxy: [GuiScope.SetRoot(LocationView.GetLocation.MakeScope).ScriptValue('dcl_elevation')|0] m"
+ DCL_TT_CONTINENTALITY:0 "Continentality: [GuiScope.SetRoot(LocationView.GetLocation.MakeScope).ScriptValue('dcl_continentality')|2]"
+ DCL_TT_TEMP_ANOMALY:0 "Weather front temperature anomaly: [GuiScope.SetRoot(LocationView.GetLocation.MakeScope).ScriptValue('dcl_temp_anomaly')|1] °C"
+ DCL_TT_HUMIDITY_ANOMALY:0 "Weather front humidity anomaly: [GuiScope.SetRoot(LocationView.GetLocation.MakeScope).ScriptValue('dcl_humidity_anomaly')|0]%"
+
+# --- Conditions card badges (each gated on its dcl_gui_*_active flag; tooltips render the live modifier effects) ---
+ DCL_CONDITIONS_NONE:0 "No climate hazards active."
+ DCL_BADGE_MUD:0 "Mud Season"
+ DCL_BADGE_MUD_TT:0 "[ShowModifierEffect('dcl_mud_season')]"
+ DCL_BADGE_ROT:0 "Tropical Rot"
+ DCL_BADGE_ROT_TT:0 "[ShowModifierEffect('dcl_tropical_rot')]"
+ DCL_BADGE_DROUGHT:0 "Severe Drought"
+ DCL_BADGE_DROUGHT_TT:0 "[ShowModifierEffect('dcl_severe_drought')]"
+ DCL_BADGE_HEAT_EXHAUSTION:0 "Heat Exhaustion"
+ DCL_BADGE_HEAT_EXHAUSTION_TT:0 "[ShowModifierEffect('dcl_heat_exhaustion')]"
+ DCL_BADGE_LETHAL_HEAT:0 "Lethal Heat"
+ DCL_BADGE_LETHAL_HEAT_TT:0 "[ShowModifierEffect('dcl_lethal_heat')]"
+
+# --- Land card ---
+ DCL_LAND_SUMMARY:0 "Cultivated [GuiScope.SetRoot(LocationView.GetLocation.MakeScope).ScriptValue('dcl_cultivation_percent')|0]% · Wilderness [GuiScope.SetRoot(LocationView.GetLocation.MakeScope).ScriptValue('dcl_wilderness_percent')|0]% (max arable [GuiScope.SetRoot(LocationView.GetLocation.MakeScope).ScriptValue('dcl_max_arable_percent')|0]%)"
+ DCL_UNSETTLED:0 "(unsettled)"
+ DCL_NOT_AVAILABLE:0 "n/a"
+ DCL_DRIFT_TITLE:0 "Yearly land drift"
+ DCL_DRIFT_STRESS:0 "Climate-stressed land (recent mud or drought): -0.03 per year"
+ DCL_DRIFT_FIELDS:0 "Neglected fields (farmers below 30% of capacity): -0.04 per year"
+ DCL_DRIFT_GROWTH:0 "Well-tended fields (farmers above 80% of capacity and a market food surplus, not while climate-stressed): +0.02 per year"
+ DCL_DRIFT_PROJECTED:0 "Projected yearly drift: [GuiScope.SetRoot(LocationView.GetLocation.MakeScope).ScriptValue('dcl_land_drift_delta')|+2]"
+ DCL_LAND_CARD_TT:0 "[ShowModifierEffect('dcl_cultivated_land')]\n[ShowModifierEffect('dcl_wilderness_land')]\n\n$DCL_DRIFT_TITLE$:\n$DCL_DRIFT_STRESS$\n$DCL_DRIFT_FIELDS$\n$DCL_DRIFT_GROWTH$\n$DCL_DRIFT_PROJECTED$"
+
+# --- Map hover row (template tooltip_location_alt_content; its data context is Location, not LocationView) ---
+ DCL_HOVER_ROW:0 "[GuiScope.SetRoot(Location.MakeScope).ScriptValue('dynamic_location_temperature')|1] °C · [GuiScope.SetRoot(Location.MakeScope).ScriptValue('dynamic_location_humidity')|0]% · Cultivated [GuiScope.SetRoot(Location.MakeScope).ScriptValue('dcl_cultivation_percent')|0]%"
